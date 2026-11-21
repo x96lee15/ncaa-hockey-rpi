@@ -239,48 +239,6 @@ export function createApp() {
     res.send(JSON.stringify(payload, null, 2));
   });
 
-  app.get('/api/export/project.zip', (_req, res) => {
-    const zipPath = path.resolve(__dirname, '../../ncaa-hockey-rpi.zip');
-    if (!fs.existsSync(zipPath)) {
-      res.status(404).json({ error: 'Project archive not found.' });
-      return;
-    }
-    res.download(zipPath, 'ncaa-hockey-rpi.zip');
-  });
-
-  app.get('/api/export/script', (_req, res) => {
-    const zipPath = path.resolve(__dirname, '../../ncaa-hockey-rpi-compact.zip');
-    if (!fs.existsSync(zipPath)) {
-      res.status(404).json({ error: 'Compact archive not found.' });
-      return;
-    }
-    const b64 = fs.readFileSync(zipPath).toString('base64');
-    const wrapped = b64.match(/.{1,100}/g)?.join('\n') ?? b64;
-    const powershell = [
-      '# IceIndex — 2026-27 NCAA D-I Men\'s Hockey RPI & NPI Extractor (Windows PowerShell)',
-      '$ErrorActionPreference = "Stop"',
-      '$b64 = @\'',
-      wrapped,
-      '\'@',
-      '$bytes = [Convert]::FromBase64String(($b64 -replace "\\s+", ""))',
-      '$zipPath = Join-Path (Get-Location) "ncaa-hockey-rpi.zip"',
-      '[IO.File]::WriteAllBytes($zipPath, $bytes)',
-      'Expand-Archive -Path $zipPath -DestinationPath (Join-Path (Get-Location) "ncaa-hockey-rpi") -Force',
-      'Remove-Item $zipPath -Force',
-      'Write-Host "Extracted project to .\\ncaa-hockey-rpi" -ForegroundColor Green',
-      'Write-Host "Next steps:"',
-      'Write-Host "  cd ncaa-hockey-rpi"',
-      'Write-Host "  npm install"',
-      'Write-Host "  npm run dev"',
-    ].join('\n');
-
-    res.json({
-      fileCount: 28,
-      zipBytes: fs.statSync(zipPath).size,
-      powershell,
-    });
-  });
-
   // Serve built frontend in production if dist/ exists
   const distDir = path.resolve(__dirname, '../dist');
   if (fs.existsSync(distDir)) {

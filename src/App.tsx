@@ -1,7 +1,6 @@
 import {
   BarChart3,
   CheckCircle2,
-  Download,
   FlaskConical,
   RefreshCw,
   SlidersHorizontal,
@@ -13,7 +12,6 @@ import { DEFAULT_NPI_DIALS, DEFAULT_RPI_DIALS } from '../shared/types';
 import { getCustomRankings, getRankings, syncLiveGames } from './api';
 import { ComparisonView } from './components/ComparisonView';
 import { DialLab } from './components/DialLab';
-import { ExportModal } from './components/ExportModal';
 import { RankingsTable } from './components/RankingsTable';
 import { TeamDossierDrawer } from './components/TeamDossierDrawer';
 import { WhatIfSimulator } from './components/WhatIfSimulator';
@@ -34,7 +32,6 @@ export default function App() {
   const [npiDials, setNpiDials] = useState<NpiDials>(DEFAULT_NPI_DIALS);
 
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
-  const [exportOpen, setExportOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [notice, setNotice] = useState<{ text: string; tone?: 'info' | 'warning' } | null>(null);
 
@@ -163,16 +160,6 @@ export default function App() {
 
           <div className="topbar-actions">
             <button
-              id="download-code-btn"
-              type="button"
-              className="sync-btn"
-              onClick={() => setExportOpen(true)}
-              title="Export full project source code to your laptop"
-            >
-              <Download size={13} />
-              Export Code
-            </button>
-            <button
               id="sync-live-btn"
               type="button"
               className="sync-btn"
@@ -277,9 +264,8 @@ export default function App() {
               <div className="summary-value">
                 <span>{summary.biggestSwing?.team.name}</span>
                 <span
-                  className={`delta-badge ${
-                    (summary.biggestSwing?.rankDelta ?? 0) > 0 ? 'up' : 'down'
-                  }`}
+                  className={`delta-badge ${(summary.biggestSwing?.rankDelta ?? 0) > 0 ? 'up' : 'down'
+                    }`}
                 >
                   {(summary.biggestSwing?.rankDelta ?? 0) > 0
                     ? `+${summary.biggestSwing?.rankDelta}`
@@ -381,8 +367,6 @@ export default function App() {
         onClose={() => setSelectedTeamId(null)}
         onSelectTeam={setSelectedTeamId}
       />
-
-      <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
     </div>
   );
 }
