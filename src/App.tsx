@@ -188,7 +188,15 @@ export default function App() {
                 Through <strong className="mono">{payload.asOfDate}</strong> ·{' '}
                 <span className="mono">{payload.completedGamesCount}</span> Finals
               </span>
-              {!isCustomDials && summary && summary.verifiedCount === 62 && (
+                {!isCustomDials && payload.sourceInfo.mode === 'live' && (
+              <span
+                className="meta-chip verified"
+                title={`Live composite schedule synced from College Hockey, Inc. at ${payload.sourceInfo.lastSyncedAt}`}
+              >
+                <CheckCircle2 size={13} /> Live · College Hockey, Inc.
+              </span>
+              )}
+              {!isCustomDials && payload.sourceInfo.mode === 'snapshot' && summary && summary.verifiedCount === 62 && (
                 <span
                   className="meta-chip verified"
                   title={`All 62 computed NPI scores match USCHO live rankings within ${summary.maxErr.toFixed(4)}`}

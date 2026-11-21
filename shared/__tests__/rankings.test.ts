@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { RAW_SCHEDULE_2026_27 } from '../../server/data/rawSchedule2026_27.js';
 import { D1_MENS_TEAMS, USCHO_NPI_REFERENCE_2026_11_20 } from '../../server/data/teams.js';
-import { parseStructuredSchedule } from '../../server/scrapers/chiParser.js';
+import { parseChiHtml, parseStructuredSchedule } from '../../server/scrapers/chiParser.js';
 import { computeCombinedRankings, simulateWhatIf } from '../compare.js';
 import { calculateNpi } from '../npi.js';
 import { calculateRpi } from '../rpi.js';
@@ -112,5 +112,136 @@ describe('2026-27 NCAA D-I Men\'s Ice Hockey RPI & NPI Engine', () => {
     expect(msuDelta.afterRpi).toBeGreaterThan(msuDelta.beforeRpi);
     expect(micDelta.afterNpi).toBeLessThan(micDelta.beforeNpi);
     expect(micDelta.afterRpi).toBeLessThan(micDelta.beforeRpi);
+  });
+
+  it('parses College Hockey, Inc. multi-line HTML table rows for finals, OT/SO, neutral sites, and scheduled games', () => {
+    const sampleChiHtml = `
+      <table class="data">
+        <tr class="stats-section"><td colspan="99">Friday, November 20, 2026</td></tr>
+        <tr valign="top" class="sked-header"><td colspan="99">Exhibition</td></tr>
+        <tr valign="top">
+          <td nowrap="nowrap">Manitoba&nbsp;</td>
+          <td class="center">1</td>
+          <td>at</td>
+          <td nowrap="nowrap" class="left">Minnesota State&nbsp;</td>
+          <td class="center">3</td>
+          <td>&nbsp;&nbsp;</td>
+          <td class="left tvlist"></td>
+          <td></td>
+          <td class="nochi"><a href="#">Gameday</a></td>
+          <td class="left"><small></small></td>
+        </tr>
+        <tr valign="top" class="sked-header"><td colspan="99">Big Ten</td></tr>
+        <tr valign="top">
+          <td nowrap="nowrap">Michigan State&nbsp;</td>
+          <td class="center">1</td>
+          <td>at</td>
+          <td nowrap="nowrap" class="left">Michigan&nbsp;</td>
+          <td class="center">5</td>
+          <td>&nbsp;&nbsp;</td>
+          <td class="left tvlist"></td>
+          <td><a href="#">Box</a></td>
+          <td class="nochi"><a href="#">Gameday</a></td>
+          <td class="left"><small></small></td>
+        </tr>
+        <tr valign="top" class="sked-header"><td colspan="99">Hockey East</td></tr>
+        <tr valign="top">
+          <td nowrap="nowrap">New Hampshire&nbsp;</td>
+          <td class="center">3</td>
+          <td>at</td>
+          <td nowrap="nowrap" class="left">Merrimack&nbsp;</td>
+          <td class="center">3</td>
+          <td>&nbsp;ot&nbsp;</td>
+          <td class="left tvlist"></td>
+          <td><a href="#">Box</a></td>
+          <td class="nochi"><a href="#">Gameday</a></td>
+          <td class="left"><small>Merrimack wins shootout, 1-0</small></td>
+        </tr>
+        <tr valign="top" class="sked-header"><td colspan="99">Non-Conference</td></tr>
+        <tr valign="top">
+          <td nowrap="nowrap">Michigan State&nbsp;</td>
+          <td class="center">5</td>
+          <td>vs.</td>
+          <td nowrap="nowrap" class="left">North Dakota&nbsp;</td>
+          <td class="center">3</td>
+          <td>&nbsp;&nbsp;</td>
+          <td class="left tvlist"></td>
+          <td><a href="#">Box</a></td>
+          <td class="nochi"><a href="#">Gameday</a></td>
+          <td class="left"><small>U.S. Hockey Hall of Fame Game</small></td>
+        </tr>
+        <tr class="stats-section"><td colspan="99">Saturday, November 21, 2026</td></tr>
+        <tr valign="top" class="sked-header"><td colspan="99">Non-Conference</td></tr>
+        <tr valign="top">
+          <td nowrap="nowrap">Holy Cross&nbsp;</td>
+          <td class="center"></td>
+          <td>at</td>
+          <td nowrap="nowrap" class="left">Quinnipiac&nbsp;</td>
+          <td class="center"></td>
+          <td>&nbsp;&nbsp;</td>
+          <td class="left tvlist"></td>
+          <td>3:30 ET</td>
+          <td class="nochi"><a href="#">Watch</a></td>
+          <td class="left"><small></small></td>
+        </tr>
+        <tr class="stats-section"><td colspan="99">Saturday, March 20, 2027</td></tr>
+        <tr valign="top" class="sked-header"><td colspan="99">HEA Tournament (at TD Garden, Boston, Mass.)</td></tr>
+        <tr valign="top">
+          <td nowrap="nowrap">TBDhe&nbsp;</td>
+          <td class="center"></td>
+          <td>vs.</td>
+          <td nowrap="nowrap" class="left">TBDhe&nbsp;</td>
+          <td class="center"></td>
+          <td>&nbsp;&nbsp;</td>
+          <td class="left tvlist"></td>
+          <td>7:00 ET</td>
+          <td class="nochi"><a href="#">Watch</a></td>
+          <td class="left"><small>Hockey East Championship</small></td>
+        </tr>
+      </table>
+    `;
+
+    const result = parseChiHtml(sampleChiHtml);
+    expect(result.unparsedLines).toHaveLength(0);
+    expect(result.skippedExhibitions).toBe(1);
+    expect(result.games).toHaveLength(4);
+
+    const [reg, soTie, neutral, sched] = result.games;
+    expect(reg).toMatchObject({
+      date: '2026-11-20',
+      awayTeamId: 'michigan-state',
+      homeTeamId: 'michigan',
+      awayScore: 1,
+      homeScore: 5,
+      isOvertime: false,
+      isShootout: false,
+      isNeutralSite: false,
+      status: 'final',
+    });
+    expect(soTie).toMatchObject({
+      awayTeamId: 'new-hampshire',
+      homeTeamId: 'merrimack',
+      awayScore: 3,
+      homeScore: 3,
+      isOvertime: true,
+      isShootout: true,
+      status: 'final',
+    });
+    expect(neutral).toMatchObject({
+      awayTeamId: 'michigan-state',
+      homeTeamId: 'north-dakota',
+      isNeutralSite: true,
+      venueNote: 'U.S. Hockey Hall of Fame Game',
+      status: 'final',
+    });
+    expect(sched).toMatchObject({
+      date: '2026-11-21',
+      awayTeamId: 'holy-cross',
+      homeTeamId: 'quinnipiac',
+      awayScore: null,
+      homeScore: null,
+      venueNote: '3:30 ET',
+      status: 'scheduled',
+    });
   });
 });

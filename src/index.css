@@ -466,6 +466,22 @@ select {
   color: #ffffff;
 }
 
+.select-input {
+  border: 1px solid var(--border-hairline);
+  background: var(--bg-surface);
+  color: var(--ink-primary);
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.select-input:focus {
+  outline: none;
+  border-color: var(--accent-ice);
+}
+
 .segmented {
   display: inline-flex;
   background: var(--bg-subtle);

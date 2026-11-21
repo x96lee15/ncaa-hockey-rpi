@@ -56,11 +56,12 @@ class SeasonStore {
     rpiDials?: Partial<RpiDials>;
     npiDials?: Partial<NpiDials>;
   }): RankingsPayload {
+    const useSnapshotRef = this.customGameIds.size === 0 && this.sourceInfo.mode === 'snapshot';
     return computeCombinedRankings(D1_MENS_TEAMS, this.games, {
       rpiDials: options?.rpiDials,
       npiDials: options?.npiDials,
       season: '2026-27',
-      referenceNpi: this.customGameIds.size === 0 ? REFERENCE_MAP : undefined,
+      referenceNpi: useSnapshotRef ? REFERENCE_MAP : undefined,
       sourceInfo: this.sourceInfo,
     });
   }
@@ -81,11 +82,13 @@ class SeasonStore {
       ]),
     );
 
+    const useSnapshotRef = this.customGameIds.size === 0 && this.sourceInfo.mode === 'snapshot';
+
     return {
       season: payload.season,
       asOfDate: payload.asOfDate,
       row,
-      uschoReference: USCHO_NPI_REFERENCE_2026_11_20[teamId] ?? null,
+      uschoReference: useSnapshotRef ? (USCHO_NPI_REFERENCE_2026_11_20[teamId] ?? null) : null,
       upcomingGames: upcomingGames.map((g) => {
         const isHome = g.homeTeamId === teamId;
         const oppId = isHome ? g.awayTeamId : g.homeTeamId;
@@ -125,10 +128,11 @@ class SeasonStore {
     outcomes: WhatIfOutcome[],
     options?: { rpiDials?: Partial<RpiDials>; npiDials?: Partial<NpiDials> },
   ): SimulationResponse {
+    const useSnapshotRef = this.customGameIds.size === 0 && this.sourceInfo.mode === 'snapshot';
     return simulateWhatIf(D1_MENS_TEAMS, this.games, outcomes, {
       rpiDials: options?.rpiDials,
       npiDials: options?.npiDials,
-      referenceNpi: this.customGameIds.size === 0 ? REFERENCE_MAP : undefined,
+      referenceNpi: useSnapshotRef ? REFERENCE_MAP : undefined,
       sourceInfo: this.sourceInfo,
     });
   }
@@ -140,8 +144,9 @@ class SeasonStore {
     mode: 'live' | 'snapshot';
   }> {
     try {
-      const parsed = await fetchLiveChiSchedule(7000);
+      const parsed = await fetchLiveChiSchedule(15000);
       const liveFinals = parsed.games.filter((g) => g.status === 'final');
+      const liveScheduled = parsed.games.filter((g) => g.status === 'scheduled');
       if (liveFinals.length >= this.baseGames.filter((g) => g.status === 'final').length) {
         this.baseGames = parsed.games;
         this.games = parsed.games.map((g) => ({ ...g }));
@@ -154,7 +159,7 @@ class SeasonStore {
         };
         return {
           synced: true,
-          message: `Synced ${liveFinals.length} completed 2026-27 games live from College Hockey, Inc.`,
+          message: `Synced ${liveFinals.length} completed and ${liveScheduled.length} upcoming 2026-27 games live from College Hockey, Inc.`,
           completedGamesCount: liveFinals.length,
           mode: 'live',
         };
